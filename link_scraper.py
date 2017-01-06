@@ -1,5 +1,8 @@
 """Uses Requests and BeautifulSoup to collect all the links from the front page of reddit.com"""
 
+#TO-DO: Workaround for "Http 429: Too many requests" error
+#TO-DO: Add support for gfycat.com
+#TO-DO: Add support for imgur albums. Maybe each post should have a subfolder?
 
 import requests
 from bs4 import BeautifulSoup
@@ -63,36 +66,52 @@ def get_titles():
 
     web_soup = BeautifulSoup(html, 'lxml')
 
+    #Find titles in html by looking at the strings inside the 'a' tags
     list_of_titles = []
     for post in web_soup.findAll(attrs={'class':'title'}):
         for title in post.findAll('a', attrs={'class':'title'}):
             list_of_titles.append(title.string)
 
+    #Replace the character "/" with "-" to avoid errors in folder reading later
+    for i in range(1, len(list_of_titles)):
+        list_of_titles[i] = list_of_titles[i].replace("/", "-")
+
     return(list_of_titles)
 
 def zip_lists(list1, list2):
+    #Packs two lists into one list of tuples. Assumes both lists have same number of elements
     zipped_list = list(zip(list1, list2))
     return(zipped_list)
 
 def download_images(list):
     for x,y in list:
-        if "imgur.com" in y:
+        #Shows three of the most common website formats and how to download from them
+        if "imgur.com" in str(y):
             extensions = ('.jpeg', '.jpg', '.png', '.gif', '.gifv', '.apng', '.tiff', '.pdf', '.xcf', '.mp4')
             if y.endswith(extensions):
                 urllib.request.urlretrieve(y, "Images/%s" %x)
+            else:
+                urllib.request.urlretrieve(get_imgur_image(y), "Images/%s" %x)
+        elif "reddit" in str(y):
+            urllib.request.urlretrieve(y, "Images/%s" %x)
 
 
 
 def get_imgur_image(url):
+    #Provides a workaround if the imgur link does not link to the actual image
+    #Uses same concepts as get_links() and get_titles() in parsing the HTML
     response = requests.get(url)
     html = response.content
 
     imgur_soup = BeautifulSoup(html)
 
-    f
+    for image in imgur_soup.findAll(attrs={'class':'post-image'}):
+        for picture in image.findAll('a'):
+            old_link = list(picture.get('href'))
+            del old_link[0:4]
+            new_link = "https://" + "".join(old_link)
+            return(new_link)
 
-#def get_reddit_image(url):
-    #function here
+
 
 download_images(zip_lists(get_titles(), get_links()))
-#write_links(get_links(), 'link_list.txt')
