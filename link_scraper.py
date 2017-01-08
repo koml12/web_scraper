@@ -1,12 +1,12 @@
 """Uses Requests and BeautifulSoup to collect all the links from the front page of reddit.com"""
 
 #TO-DO: Workaround for "Http 429: Too many requests" error
-#TO-DO: Add support for gfycat.com
 #TO-DO: Add support for imgur albums. Maybe each post should have a subfolder?
 
 import requests
 from bs4 import BeautifulSoup
 import urllib.request
+import time
 
 def get_links():
     #set up BeautifulSoup with website
@@ -85,7 +85,7 @@ def zip_lists(list1, list2):
 
 def download_images(list):
     for x,y in list:
-        #Shows three of the most common website formats and how to download from them
+        download_count = 0
         if "imgur.com" in str(y):
             extensions = ('.jpeg', '.jpg', '.png', '.gif', '.gifv', '.apng', '.tiff', '.pdf', '.xcf', '.mp4')
             if y.endswith(extensions):
@@ -95,6 +95,19 @@ def download_images(list):
         elif "reddit" in str(y):
             urllib.request.urlretrieve(y, "Images/%s" %x)
 
+
+def download_images2(list1, list2):
+    for i in range(0, len(list1)-1):
+        if "imgur.com" in str(list2[i]):
+            extensions = ('.jpeg', '.jpg', '.png', '.gif', '.gifv', '.apng', '.tiff', '.pdf', '.xcf', '.mp4')
+            if list2[i].endswith(extensions):
+                urllib.request.urlretrieve(list2[i], "Images/%s" %list1[i])
+            else:
+                urllib.request.urlretrieve(get_imgur_image(list2[i]), "Images/%s" %list1[i])
+        elif "reddit" in str(list2[i]):
+            urllib.request.urlretrieve(list2[i], "Images/%s" %list1[i])
+        elif "gfycat" in str(list2[i]):
+            urllib.request.urlretrieve(get_gfycat_image(list2[i]), "Images/%s" %list1[i])
 
 
 def get_imgur_image(url):
@@ -112,6 +125,16 @@ def get_imgur_image(url):
             new_link = "https://" + "".join(old_link)
             return(new_link)
 
+def get_gfycat_image(url):
+    response = requests.get(url)
+    html = response.content
+
+    gfycat_soup = BeautifulSoup(html)
+
+    for gif in gfycat_soup.findAll(attrs={'class':'video-figure'}):
+        link = gif.get('poster')
+        return(link)
 
 
-download_images(zip_lists(get_titles(), get_links()))
+
+download_images2(get_titles(), get_links())
